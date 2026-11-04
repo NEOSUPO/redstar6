@@ -107,7 +107,6 @@ function settingsPairs(plan, bounds, grid) {
     ["snap", settings.snap === false ? "false" : "true"],
     ["rotation_step", settings.rotationStep || 15],
     ["brightness", settings.brightness ?? 1],
-    ["render_quality", settings.hq ? "high" : "standard"],
     ["origin_x_mm", grid.originX],
     ["origin_y_mm", grid.originY],
     ["grid_cell_mm", grid.cellMm],
@@ -490,7 +489,6 @@ function settingsFrom(settings, drawings) {
     snap: String(settings.snap) !== "false",
     rotationStep: num(settings.rotation_step) || 15,
     brightness: [0, 1, 2].includes(brightness) ? brightness : 1,
-    hq: String(settings.render_quality) === "high",
     exported: false,
   };
 }

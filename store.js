@@ -157,7 +157,6 @@ export function blankPlan(name, settings = {}) {
       snap: true,
       rotationStep: 15,
       brightness: 1,
-      hq: false,
       exported: false,
     },
     rooms: [],
@@ -182,12 +181,11 @@ export function normalizePlan(plan) {
     snap: true,
     rotationStep: 15,
     brightness: 1,
-    hq: false,
     exported: false,
     ...(plan.settings || {}),
   };
   settings.brightness = [0, 1, 2].includes(Number(settings.brightness)) ? Number(settings.brightness) : 1;
-  settings.hq = settings.hq === true;
+  delete settings.hq;
   const rooms = (Array.isArray(plan.rooms) ? plan.rooms : []).map((room) => ensureRoom({
     floorFinish: "床",
     floorColor: room.color || "#d5e4f2",

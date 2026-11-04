@@ -8,7 +8,7 @@ import { SSAOPass } from "three/addons/postprocessing/SSAOPass.js";
 import { lookupItem } from "./catalog.js?v=20261028d";
 import { centroid, edgeGeometry, outlinePoints, pointInRoom } from "./geometry.js?v=20261022d";
 import { cutsForWall, hingePoint, leafSwing, openingCenter } from "./openings.js?v=20261022f";
-import { snapValue } from "./store.js?v=20261104a";
+import { snapValue } from "./store.js?v=20261104h";
 import { counterTop, seatItems, shiftGuests } from "./surface.js?v=20261028d";
 
 const BRIGHTNESS = [0.45, 0.85, 1.25];
@@ -256,7 +256,7 @@ export function createView3d(canvas, store, ui) {
   }
 
   function applyLook(plan) {
-    hq = plan.settings?.hq === true;
+    hq = ui.tab === "present";
     const step = [0, 1, 2].includes(Number(plan.settings?.brightness)) ? Number(plan.settings.brightness) : 1;
     const level = BRIGHTNESS[step];
     renderer.toneMapping = hq ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
@@ -1196,6 +1196,10 @@ export function createView3d(canvas, store, ui) {
   });
   window.addEventListener("resize", resize);
   store.subscribe(rebuild);
+  ui.subscribe(() => {
+    if ((ui.tab === "present") === hq) return;
+    rebuild();
+  });
   resize();
   rebuild();
   fit();
