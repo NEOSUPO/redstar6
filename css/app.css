@@ -182,6 +182,20 @@ aside { flex: 1; min-height: 0; overflow: auto; padding: 12px; background: trans
   box-shadow: 0 10px 24px rgba(6, 56, 64, 0.16);
 }
 .stage canvas[hidden] { display: none !important; }
+#item-tip {
+  position: absolute;
+  z-index: 4;
+  pointer-events: none;
+  max-width: 280px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(6, 56, 64, 0.92);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+#item-tip[hidden] { display: none !important; }
 .float-tools {
   position: absolute;
   z-index: 2;

@@ -6,7 +6,7 @@ import { attachLeaf, clampOpenings, hingeForHand, noteRemovedVertex, resizeOpeni
 import { bindPower, powerPanel } from "./power.js?v=20261028d";
 import { createStore, uid } from "./store.js?v=20261104h";
 import { seatItems } from "./surface.js?v=20261028d";
-import { createView2d } from "./view2d.js?v=20261104h";
+import { createView2d } from "./view2d.js?v=20261104j";
 
 const store = createStore();
 const ui = createController();

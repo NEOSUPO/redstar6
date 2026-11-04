@@ -39,6 +39,11 @@ export function createView2d(canvas, store, ui) {
   let drag = null;
   let measure = null;
   let placedRoomId = null;
+  let hoverId = null;
+  const tip = document.createElement("div");
+  tip.id = "item-tip";
+  tip.hidden = true;
+  canvas.parentElement.appendChild(tip);
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
@@ -495,9 +500,10 @@ export function createView2d(canvas, store, ui) {
     const w = entry.w * cam.scale;
     const d = entry.d * cam.scale;
     const pad = entry.hostId ? Math.min(70, Math.max(30, Math.min(entry.w, entry.d) * 0.06)) * cam.scale : 0;
+    const hot = entry.id === hoverId;
     ctx.fillStyle = entry.color || cat?.color || "#888";
-    ctx.strokeStyle = selected("item", entry.id) ? "#0060b0" : "rgba(0,0,0,0.45)";
-    ctx.lineWidth = selected("item", entry.id) ? 2 : 1;
+    ctx.strokeStyle = selected("item", entry.id) ? "#0060b0" : hot ? "#24566e" : "rgba(0,0,0,0.45)";
+    ctx.lineWidth = selected("item", entry.id) ? 2 : hot ? 1.5 : 1;
     ctx.fillRect(-w / 2 + pad, -d / 2 + pad, Math.max(1, w - pad * 2), Math.max(1, d - pad * 2));
     ctx.strokeRect(-w / 2 + pad, -d / 2 + pad, Math.max(1, w - pad * 2), Math.max(1, d - pad * 2));
     if (entry.groupId) {
@@ -514,10 +520,6 @@ export function createView2d(canvas, store, ui) {
       ctx.textAlign = "center";
       ctx.fillText("鍵", w / 2 - 7, -d / 2 + 11);
     }
-    ctx.fillStyle = "#1c2430";
-    ctx.font = "11px sans-serif";
-    ctx.textAlign = "center";
-    if (w > 28) ctx.fillText(entry.name, 0, 4);
     ctx.restore();
   }
 
@@ -675,6 +677,28 @@ export function createView2d(canvas, store, ui) {
   }
 
   canvas.addEventListener("contextmenu", (event) => event.preventDefault());
+  function placeTip(sx, sy) {
+    const width = tip.offsetWidth;
+    const height = tip.offsetHeight;
+    const bounds = canvas.getBoundingClientRect();
+    let x = sx + 14;
+    let y = sy + 18;
+    if (x + width > bounds.width - 8) x = Math.max(8, sx - width - 12);
+    if (y + height > bounds.height - 8) y = Math.max(8, sy - height - 12);
+    tip.style.left = `${x}px`;
+    tip.style.top = `${y}px`;
+  }
+
+  function showTip(entry, sx, sy) {
+    if (!entry?.name || drag) {
+      tip.hidden = true;
+      return;
+    }
+    tip.textContent = entry.name;
+    tip.hidden = false;
+    placeTip(sx, sy);
+  }
+
   canvas.addEventListener("pointerdown", (event) => {
     try {
       canvas.setPointerCapture(event.pointerId);
@@ -684,6 +708,7 @@ export function createView2d(canvas, store, ui) {
     const rect = canvas.getBoundingClientRect();
     pointer.down = true;
     pointer.button = event.button;
+    tip.hidden = true;
     pointer.sx = event.clientX - rect.left;
     pointer.sy = event.clientY - rect.top;
     const wpt = world(pointer.sx, pointer.sy);
@@ -810,7 +835,17 @@ export function createView2d(canvas, store, ui) {
     pointer.sx = event.clientX - rect.left;
     pointer.sy = event.clientY - rect.top;
     const wpt = world(pointer.sx, pointer.sy);
-    if (!pointer.down || !drag) return;
+    if (!pointer.down || !drag) {
+      const hit = hitItem(wpt.x, wpt.y);
+      const next = hit?.id || null;
+      if (next !== hoverId) {
+        hoverId = next;
+        draw();
+      }
+      showTip(hit, pointer.sx, pointer.sy);
+      return;
+    }
+    tip.hidden = true;
     if (drag.kind === "pan") {
       const moved = Math.hypot(pointer.sx - drag.sx, pointer.sy - drag.sy);
       if (drag.clearOnClick && moved < 4) return;
@@ -832,6 +867,13 @@ export function createView2d(canvas, store, ui) {
       const enabled = store.get().settings.snap;
       moveSelection(drag, wpt, enabled);
     }
+  });
+
+  canvas.addEventListener("pointerleave", () => {
+    tip.hidden = true;
+    if (!hoverId) return;
+    hoverId = null;
+    draw();
   });
 
   canvas.addEventListener("pointerup", (event) => {
