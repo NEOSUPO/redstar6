@@ -7,7 +7,7 @@ import { bindPower, powerPanel } from "./power.js?v=20261028d";
 import { createStore, uid } from "./store.js?v=20261104h";
 import { seatItems } from "./surface.js?v=20261028d";
 import { mountSpecs } from "./specs.js?v=20261104m";
-import { createView2d } from "./view2d.js?v=20261104k";
+import { createView2d } from "./view2d.js?v=20261104n";
 
 const store = createStore();
 const ui = createController();
@@ -83,6 +83,8 @@ document.querySelectorAll(".tabs button").forEach((button) => {
     ui.setTab(tab);
     document.querySelectorAll(".tabs button").forEach((el) => el.classList.toggle("active", el === button));
     if (tab === "items" || tab === "layout" || tab === "power") ui.setTool("select");
+    document.querySelector("#mode-3d").hidden = tab === "power";
+    if (tab === "power" && mode === "3d") setMode("2d");
     renderSidebar();
   });
 });
@@ -202,7 +204,7 @@ async function setMode(next) {
   document.querySelector("#mode-3d").classList.toggle("active", next === "3d");
   document.querySelector("#view-toggle").hidden = next !== "3d";
   if (next === "3d" && !view3d) {
-    const mod = await import("./view3d.js?v=20261104i");
+    const mod = await import("./view3d.js?v=20261104n");
     view3d = mod.createView3d(document.querySelector("#view3d"), store, ui);
     view3d.setSelection(ui.selection);
   }

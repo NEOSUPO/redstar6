@@ -276,7 +276,7 @@ button.primary, button.active {
 }
 .tool-group:last-child { border-right: 0; padding-right: 0; }
 #view-toggle { flex-wrap: nowrap; }
-#view-toggle[hidden] { display: none !important; }
+#view-toggle[hidden], #mode-3d[hidden] { display: none !important; }
 #view-help {
   position: absolute;
   left: 12px;

@@ -188,7 +188,7 @@ export function createView2d(canvas, store, ui) {
     ctx.fillStyle = "#243040";
     ctx.font = "13px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(room.name, label.x, label.y - 8);
+    if (ui.tab === "layout") ctx.fillText(room.name, label.x, label.y - 8);
     ctx.fillText(`${(roomArea(room) / 1e6).toFixed(2)} ㎡`, label.x, label.y + 10);
     if (room.floorFinish && room.floorFinish !== "床") ctx.fillText(room.floorFinish, label.x, label.y + 26);
     if (selected("room", room.id)) {

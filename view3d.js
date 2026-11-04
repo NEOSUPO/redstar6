@@ -1018,7 +1018,7 @@ export function createView3d(canvas, store, ui) {
       mapCtx.restore();
     }
     for (const room of rooms) {
-      if (room.w * scale < 42 || room.h * scale < 18 || !room.name) continue;
+      if (ui.tab !== "layout" || room.w * scale < 42 || room.h * scale < 18 || !room.name) continue;
       const center = centroid(room);
       mapCtx.save();
       mapCtx.beginPath();
