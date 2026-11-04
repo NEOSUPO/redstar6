@@ -193,7 +193,7 @@ export function createView3d(canvas, store, ui) {
     if (!hq || !mesh) return;
     if (kind === "floor" || kind === "wall" || kind === "wood" || kind === "plain") tileUVs(mesh.geometry);
     mesh.castShadow = kind === "wall" || kind === "wood" || kind === "plain" || kind === "metal";
-    mesh.receiveShadow = kind === "floor" || kind === "wall" || kind === "wood" || kind === "plain" || kind === "metal";
+    mesh.receiveShadow = kind === "floor" || kind === "wood" || kind === "plain" || kind === "metal";
   }
 
   function surfaceKind(entry, cat) {
@@ -289,10 +289,11 @@ export function createView3d(canvas, store, ui) {
     composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
     const pass = new SSAOPass(scene, camera, 512, 512);
-    // kernelRadius is view-space millimetres. min/max are normalized depth, not millimetres.
-    pass.kernelRadius = 180;
-    pass.minDistance = 0.00005;
-    pass.maxDistance = 0.005;
+    // kernelRadius is view-space millimetres. min/max are normalized depth.
+    // The minimum skips flush wall seams and the line above a door frame.
+    pass.kernelRadius = 70;
+    pass.minDistance = 0.00035;
+    pass.maxDistance = 0.004;
     composer.addPass(pass);
     const output = new OutputPass();
     composer.addPass(output);
