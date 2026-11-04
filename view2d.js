@@ -26,7 +26,7 @@ import {
   syncLeaves,
 } from "./openings.js?v=20261022f";
 import { addBreaker, addOutlet, addPanel, drawPower, hitPower, placeAnchor, symbolById } from "./power.js?v=20261028d";
-import { snapValue, uid } from "./store.js?v=20261028d";
+import { snapValue, uid } from "./store.js?v=20261104a";
 import { seatItems, shiftGuests } from "./surface.js?v=20261028d";
 
 const images = new Map();

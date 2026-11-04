@@ -1,12 +1,12 @@
-import { bookToPlan, planToBook } from "./book.js?v=20261028d";
+import { bookToPlan, planToBook } from "./book.js?v=20261104a";
 import { insertPoint, removePoint, roomArea, scaleRoom, setEdgeArc } from "./geometry.js?v=20261022d";
 import { ROOM_TYPES, catalogTemplateCsv, categoryTree, importUserCatalog, loadSharedCatalog, lookupItem } from "./catalog.js?v=20261028d";
 import { readTables, writeWorkbook } from "./excelio.js?v=20261028d";
 import { attachLeaf, clampOpenings, hingeForHand, noteRemovedVertex, resizeOpening, splitEdgeOpenings } from "./openings.js?v=20261022f";
 import { bindPower, powerPanel } from "./power.js?v=20261028d";
-import { createStore, uid } from "./store.js?v=20261028d";
+import { createStore, uid } from "./store.js?v=20261104a";
 import { seatItems } from "./surface.js?v=20261028d";
-import { createView2d } from "./view2d.js?v=20261028d";
+import { createView2d } from "./view2d.js?v=20261104a";
 
 const store = createStore();
 const ui = createController();
@@ -185,7 +185,7 @@ async function setMode(next) {
   document.querySelector("#mode-3d").classList.toggle("active", next === "3d");
   document.querySelector("#view-toggle").hidden = next !== "3d";
   if (next === "3d" && !view3d) {
-    const mod = await import("./view3d.js?v=20261028d");
+    const mod = await import("./view3d.js?v=20261104g");
     view3d = mod.createView3d(document.querySelector("#view3d"), store, ui);
     view3d.setSelection(ui.selection);
   }
@@ -301,6 +301,11 @@ function bindSidebar() {
   sidebar.querySelector("#brightness")?.addEventListener("change", (event) => {
     store.update((plan) => {
       plan.settings.brightness = Number(event.target.value);
+    });
+  });
+  sidebar.querySelector("#hq-mode")?.addEventListener("change", (event) => {
+    store.update((plan) => {
+      plan.settings.hq = event.target.checked;
     });
   });
   sidebar.querySelector("#shot")?.addEventListener("click", exportImage);
@@ -445,6 +450,8 @@ function presentPanel() {
           <option value="2" ${level === 2 ? "selected" : ""}>明るい</option>
         </select>
       </label>
+      <label class="check"><input id="hq-mode" type="checkbox" ${plan.settings.hq ? "checked" : ""} /> 高画質</label>
+      <p class="note">高画質は、今の形と操作のまま、光・質感・ぼかした影・隅の陰・露出を建築パースに近づけます。</p>
       <button type="button" id="add-view">視点を追加</button>
       <button type="button" id="shot">画像を書き出す</button>
       ${plan.settings.exported ? `<p class="note">書き出し済み。編集はそのまま続けられます。</p>` : ""}
