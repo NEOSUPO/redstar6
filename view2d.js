@@ -1243,6 +1243,18 @@ export function createView2d(canvas, store, ui) {
     return hit && hit.dist <= reach ? hit.edgeIndex : null;
   }
 
+  function showItem(entry) {
+    if (!entry) return;
+    cam.x = entry.x;
+    cam.y = entry.y;
+    const span = Math.max(entry.w || 0, entry.d || 0) * cam.scale;
+    if (span < 48) {
+      const next = 96 / Math.max(entry.w || 900, entry.d || 600, 200);
+      cam.scale = Math.min(0.3, Math.max(cam.scale, next));
+    }
+    draw();
+  }
+
   function zoomBy(factor) {
     cam.scale = Math.min(0.4, Math.max(0.01, cam.scale * factor));
     draw();
@@ -1345,7 +1357,7 @@ export function createView2d(canvas, store, ui) {
   store.subscribe(() => draw());
   ui.subscribe(() => draw());
 
-  return { draw, resize, zoomBy, fit, camera: () => ({ ...cam }) };
+  return { draw, resize, zoomBy, fit, showItem, camera: () => ({ ...cam }) };
 }
 
 function pointSegmentDist(px, py, ax, ay, bx, by) {

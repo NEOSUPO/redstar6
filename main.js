@@ -6,7 +6,8 @@ import { attachLeaf, clampOpenings, hingeForHand, noteRemovedVertex, resizeOpeni
 import { bindPower, powerPanel } from "./power.js?v=20261028d";
 import { createStore, uid } from "./store.js?v=20261104h";
 import { seatItems } from "./surface.js?v=20261028d";
-import { createView2d } from "./view2d.js?v=20261104j";
+import { mountSpecs } from "./specs.js?v=20261104m";
+import { createView2d } from "./view2d.js?v=20261104k";
 
 const store = createStore();
 const ui = createController();
@@ -38,6 +39,11 @@ function setFold(kind, folded) {
     const button = document.querySelector("#fold-menu");
     button.setAttribute("aria-expanded", String(!folded));
     button.textContent = folded ? "パネル" : "パネルを閉じる";
+  } else if (kind === "specs") {
+    document.querySelector(".workspace").classList.toggle("specs-folded", folded);
+    const button = document.querySelector("#fold-specs");
+    button.setAttribute("aria-expanded", String(!folded));
+    button.textContent = folded ? "諸元一覧" : "諸元一覧を閉じる";
   } else {
     document.querySelector("#float-tools").classList.toggle("folded", folded);
     const button = document.querySelector("#fold-tools");
@@ -50,11 +56,22 @@ function setFold(kind, folded) {
 const storedFolds = readFolds();
 if (storedFolds.menu) setFold("menu", true);
 if (storedFolds.tools) setFold("tools", true);
+if (storedFolds.specs) setFold("specs", true);
 document.querySelector("#fold-menu").addEventListener("click", () => {
   setFold("menu", !document.querySelector(".workspace").classList.contains("menu-folded"));
 });
 document.querySelector("#fold-tools").addEventListener("click", () => {
   setFold("tools", !document.querySelector("#float-tools").classList.contains("folded"));
+});
+document.querySelector("#fold-specs").addEventListener("click", () => {
+  setFold("specs", !document.querySelector(".workspace").classList.contains("specs-folded"));
+});
+mountSpecs({
+  store,
+  ui,
+  showItem: (entry) => view2d.showItem(entry),
+  groupSelection,
+  ungroupSelection,
 });
 let view3d = null;
 let tab = "layout";
