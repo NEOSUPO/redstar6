@@ -7,7 +7,7 @@ import { bindPower, powerPanel } from "./power.js?v=20261028d";
 import { createStore, uid } from "./store.js?v=20261104h";
 import { seatItems } from "./surface.js?v=20261028d";
 import { mountSpecs } from "./specs.js?v=20261104m";
-import { createView2d } from "./view2d.js?v=20261104n";
+import { createView2d } from "./view2d.js?v=20261104o";
 
 const store = createStore();
 const ui = createController();
