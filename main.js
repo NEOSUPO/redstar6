@@ -12,7 +12,7 @@ const store = createStore();
 const ui = createController();
 const sidebar = document.querySelector("#sidebar");
 const view2d = createView2d(document.querySelector("#view2d"), store, ui);
-const FOLD_KEY = "neosupo-star-beta5-folds";
+const FOLD_KEY = "neosupo-star-beta6-folds";
 
 function readFolds() {
   try {
