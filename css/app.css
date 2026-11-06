@@ -390,8 +390,65 @@ dialog {
 dialog h2 { font-size: 16px; letter-spacing: 0; color: var(--teal-deep); margin-bottom: 10px; }
 dialog::backdrop { background: rgba(6, 32, 36, 0.46); }
 .row { display: flex; justify-content: flex-end; gap: 8px; }
-.plan-row { display: flex; gap: 6px; width: 100%; margin: 0; }
-.plan-row button:first-child { flex: 1; border-radius: 10px; text-align: left; }
+.plan-row { display: flex; gap: 6px; width: 100%; margin: 0; align-items: stretch; }
+.plan-row button:first-child {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border-radius: 10px;
+  text-align: left;
+}
+.plan-row small, .plan-card small { color: #5d6f6c; font-size: 11px; }
+.plan-row.is-current button:first-child,
+.plan-card.is-current { border-color: var(--teal); box-shadow: inset 0 0 0 1px var(--teal); }
+#dialog-list { width: min(560px, 94vw); max-height: min(860px, 92vh); }
+#dialog-list.thumbs { width: min(920px, 96vw); }
+.plan-list-bar { display: flex; align-items: end; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.plan-list-bar label { width: 108px; }
+.plan-view-switch { display: flex; gap: 6px; }
+#plan-rows {
+  display: grid;
+  gap: 8px;
+  max-height: min(58vh, 560px);
+  overflow: auto;
+  margin-top: 10px;
+}
+#dialog-list.thumbs #plan-rows { grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); align-content: start; }
+.plan-card {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 8px;
+  background: #fff;
+}
+.plan-thumb {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  border-radius: 10px;
+  text-align: left;
+}
+.plan-thumb:hover { border-color: transparent; }
+.plan-thumb-svg { width: 100%; height: 132px; background: #eef4f2; border-radius: 10px; }
+.plan-card-name { font-weight: 700; }
+.plan-card-actions { display: flex; gap: 6px; }
+.plan-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0;
+}
+.plan-page-gap, .plan-page-range { color: #5d6f6c; font-size: 12px; }
+.plan-pager button[disabled] { opacity: 0.45; cursor: default; }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 td, th { border-bottom: 1px solid var(--line); padding: 6px 4px; text-align: left; }
 input[type="color"] { height: 36px; padding: 2px; }

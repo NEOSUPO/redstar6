@@ -60,7 +60,12 @@ export function createStore() {
       return () => listeners.delete(fn);
     },
     get: current,
-    list: () => plans.map((plan) => ({ id: plan.id, name: plan.name, updatedAt: plan.updatedAt })),
+    list: () => plans.map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+      updatedAt: plan.updatedAt,
+      preview: planPreview(plan),
+    })),
     update,
     checkpoint,
     mutate,
@@ -267,6 +272,25 @@ function attachWalls(plan) {
 
 export function uid() {
   return Math.random().toString(36).slice(2, 10);
+}
+
+function planPreview(plan) {
+  return {
+    rooms: (plan.rooms || []).map((room) => ({
+      color: room.floorColor || room.color || "#d5e4f2",
+      wall: room.wallColor || "#8e98a3",
+      points: (room.points || []).map((point) => ({ x: Number(point.x) || 0, y: Number(point.y) || 0 })),
+      edges: (room.edges || []).map((edge) => (edge?.radius ? { radius: Number(edge.radius) || 0, bow: edge.bow >= 0 ? 1 : -1 } : null)),
+    })),
+    items: (plan.items || []).map((entry) => ({
+      x: Number(entry.x) || 0,
+      y: Number(entry.y) || 0,
+      w: Number(entry.w) || 0,
+      d: Number(entry.d) || 0,
+      rot: Number(entry.rot) || 0,
+      color: entry.color || "#b7b1a4",
+    })),
+  };
 }
 
 function loadAll() {

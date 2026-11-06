@@ -1,10 +1,10 @@
 import { bookToPlan, planToBook } from "./book.js?v=20261104h";
-import { insertPoint, removePoint, roomArea, scaleRoom, setEdgeArc } from "./geometry.js?v=20261022d";
+import { insertPoint, outlinePoints, removePoint, roomArea, scaleRoom, setEdgeArc } from "./geometry.js?v=20261022d";
 import { ROOM_TYPES, catalogTemplateCsv, categoryTree, importUserCatalog, loadSharedCatalog, lookupItem } from "./catalog.js?v=20261028d";
 import { readTables, writeWorkbook } from "./excelio.js?v=20261028d";
 import { attachLeaf, clampOpenings, hingeForHand, noteRemovedVertex, resizeOpening, splitEdgeOpenings } from "./openings.js?v=20261022f";
 import { bindPower, powerPanel } from "./power.js?v=20261028d";
-import { createStore, uid } from "./store.js?v=20261104h";
+import { createStore, uid } from "./store.js?v=20261106b";
 import { seatItems } from "./surface.js?v=20261028d";
 import { mountSpecs } from "./specs.js?v=20261104m";
 import { createView2d } from "./view2d.js?v=20261104o";
@@ -152,9 +152,43 @@ document.querySelector("#form-new").addEventListener("submit", (event) => {
   });
   view2d.fit();
 });
+const PLAN_LIST_KEY = "neosupo-star-beta6-plan-list";
+const planList = loadPlanListPref();
 document.querySelector("#plan-list").addEventListener("click", () => {
+  const all = sortedPlans();
+  const index = Math.max(0, all.findIndex((plan) => plan.id === store.get()?.id));
+  planList.page = Math.floor(index / planList.pageSize);
   renderPlanList();
   document.querySelector("#dialog-list").showModal();
+});
+document.querySelector("#plan-page-size").addEventListener("change", (event) => {
+  const next = Math.round(Number(event.target.value));
+  if (!Number.isFinite(next)) {
+    event.target.value = String(planList.pageSize);
+    return;
+  }
+  const pageSize = Math.min(60, Math.max(1, next));
+  const anchor = planList.page * planList.pageSize;
+  planList.pageSize = pageSize;
+  planList.page = Math.floor(anchor / pageSize);
+  event.target.value = String(pageSize);
+  savePlanListPref();
+  renderPlanList();
+});
+document.querySelector("#plan-view-list").addEventListener("click", () => setPlanView("list"));
+document.querySelector("#plan-view-thumb").addEventListener("click", () => setPlanView("thumb"));
+document.querySelector("#plan-pager").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-page]");
+  if (!button || button.disabled) return;
+  const pages = Math.max(1, Math.ceil(sortedPlans().length / planList.pageSize));
+  if (button.dataset.page === "prev") planList.page = Math.max(0, planList.page - 1);
+  else if (button.dataset.page === "next") planList.page = Math.min(pages - 1, planList.page + 1);
+  else planList.page = Number(button.dataset.page) || 0;
+  renderPlanList();
+});
+document.querySelector("#dialog-list form").addEventListener("submit", (event) => {
+  if (event.submitter?.id === "plan-list-close") return;
+  event.preventDefault();
 });
 document.querySelector("#detail").addEventListener("click", () => {
   renderDetail();
@@ -996,36 +1030,54 @@ function ungroupSelection() {
   });
 }
 
-function visiblePlans() {
-  const all = store.list().slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
-  const shown = all.slice(0, 10);
-  const active = store.get();
-  if (active && !shown.some((plan) => plan.id === active.id)) {
-    const current = all.find((plan) => plan.id === active.id);
-    if (current) {
-      shown.pop();
-      shown.unshift(current);
-    }
+function loadPlanListPref() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PLAN_LIST_KEY)) || {};
+    const pageSize = Math.min(60, Math.max(1, Math.round(Number(saved.pageSize)) || 10));
+    return { page: 0, pageSize, view: saved.view === "thumb" ? "thumb" : "list" };
+  } catch {
+    return { page: 0, pageSize: 10, view: "list" };
   }
-  return { shown, kept: Math.max(0, all.length - shown.length) };
+}
+
+function savePlanListPref() {
+  localStorage.setItem(PLAN_LIST_KEY, JSON.stringify({ pageSize: planList.pageSize, view: planList.view }));
+}
+
+function setPlanView(view) {
+  planList.view = view === "thumb" ? "thumb" : "list";
+  savePlanListPref();
+  renderPlanList();
+}
+
+function sortedPlans() {
+  return store.list().slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
 }
 
 function renderPlanList() {
-  const { shown, kept } = visiblePlans();
-  const more = document.querySelector("#plan-more");
-  if (more) more.hidden = kept === 0;
+  const all = sortedPlans();
+  const pages = Math.max(1, Math.ceil(all.length / planList.pageSize));
+  planList.page = Math.min(pages - 1, Math.max(0, planList.page));
+  const start = planList.page * planList.pageSize;
+  const shown = all.slice(start, start + planList.pageSize);
+  const activeId = store.get()?.id;
+  const dialog = document.querySelector("#dialog-list");
+  dialog.classList.toggle("thumbs", planList.view === "thumb");
+  const sizeInput = document.querySelector("#plan-page-size");
+  sizeInput.value = String(planList.pageSize);
+  for (const [id, view] of [["#plan-view-list", "list"], ["#plan-view-thumb", "thumb"]]) {
+    const button = document.querySelector(id);
+    const on = planList.view === view;
+    button.classList.toggle("active", on);
+    button.setAttribute("aria-pressed", String(on));
+  }
   const host = document.querySelector("#plan-rows");
-  host.innerHTML = shown.map((plan) => `
-    <div class="plan-row">
-      <button type="button" data-open="${plan.id}">${escapeHtml(plan.name)}</button>
-      <button type="button" data-copy="${plan.id}">複製</button>
-      <button type="button" data-del="${plan.id}">削除</button>
-    </div>
-  `).join("");
+  host.innerHTML = shown.map((plan) => planCard(plan, plan.id === activeId)).join("");
+  document.querySelector("#plan-pager").innerHTML = planPager(planList.page, pages, start, shown.length, all.length);
   host.querySelectorAll("[data-open]").forEach((button) => {
     button.addEventListener("click", () => {
       store.open(button.dataset.open);
-      document.querySelector("#dialog-list").close();
+      dialog.close();
       renderSidebar();
       view2d.fit();
     });
@@ -1034,6 +1086,7 @@ function renderPlanList() {
     button.addEventListener("click", () => {
       store.open(button.dataset.copy);
       store.duplicate();
+      planList.page = 0;
       renderPlanList();
       view2d.fit();
     });
@@ -1045,6 +1098,123 @@ function renderPlanList() {
       renderSidebar();
     });
   });
+}
+
+function planCard(plan, current) {
+  const meta = `${formatPlanTime(plan.updatedAt)}　部屋 ${plan.preview.rooms.length}　器具 ${plan.preview.items.length}${current ? "　開いています" : ""}`;
+  const actions = `
+    <button type="button" data-copy="${plan.id}">複製</button>
+    <button type="button" data-del="${plan.id}">削除</button>
+  `;
+  if (planList.view === "thumb") {
+    return `
+      <article class="plan-card${current ? " is-current" : ""}">
+        <button type="button" class="plan-thumb" data-open="${plan.id}">
+          ${planThumb(plan.preview)}
+          <span class="plan-card-name">${escapeHtml(plan.name)}</span>
+          <small>${escapeHtml(meta)}</small>
+        </button>
+        <div class="plan-card-actions">${actions}</div>
+      </article>
+    `;
+  }
+  return `
+    <div class="plan-row${current ? " is-current" : ""}">
+      <button type="button" data-open="${plan.id}">
+        <span>${escapeHtml(plan.name)}</span>
+        <small>${escapeHtml(meta)}</small>
+      </button>
+      ${actions}
+    </div>
+  `;
+}
+
+function planPager(page, pages, start, count, total) {
+  const marks = pageWindow(page, pages).map((entry) => {
+    if (entry === "gap") return `<span class="plan-page-gap">…</span>`;
+    return `<button type="button" data-page="${entry}"${entry === page ? ` class="active" aria-current="page"` : ""}>${entry + 1}</button>`;
+  }).join("");
+  const range = total ? `${start + 1}–${start + count} / ${total}件` : "0件";
+  return `
+    <button type="button" data-page="prev"${page === 0 ? " disabled" : ""}>前へ</button>
+    ${marks}
+    <button type="button" data-page="next"${page >= pages - 1 ? " disabled" : ""}>次へ</button>
+    <span class="plan-page-range">${range}</span>
+  `;
+}
+
+function pageWindow(page, pages) {
+  if (pages <= 7) return Array.from({ length: pages }, (_, index) => index);
+  const items = [0];
+  const start = Math.max(1, page - 1);
+  const end = Math.min(pages - 2, page + 1);
+  if (start > 1) items.push("gap");
+  for (let index = start; index <= end; index += 1) items.push(index);
+  if (end < pages - 2) items.push("gap");
+  items.push(pages - 1);
+  return items;
+}
+
+function formatPlanTime(value) {
+  if (!value) return "更新なし";
+  const date = new Date(value);
+  const month = date.getMonth() + 1;
+  const day = date.getDate();
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${date.getFullYear()}/${month}/${day} ${hours}:${minutes}`;
+}
+
+function planThumb(preview) {
+  const rooms = (preview?.rooms || []).map((room) => ({
+    color: svgColor(room.color, "#d5e4f2"),
+    wall: svgColor(room.wall, "#8e98a3"),
+    outline: room.points?.length >= 3 ? outlinePoints(room, 160) : [],
+  })).filter((room) => room.outline.length >= 3);
+  const items = (preview?.items || []).filter((item) => item.w > 0 && item.d > 0);
+  const bounds = [];
+  for (const room of rooms) bounds.push(...room.outline);
+  for (const item of items) bounds.push(...itemCorners(item));
+  if (!bounds.length) {
+    return `<svg class="plan-thumb-svg" viewBox="0 0 160 100" aria-hidden="true"><rect width="160" height="100" fill="#eef4f2"/><text x="80" y="54" text-anchor="middle" fill="#7b8c89" font-size="13">図面なし</text></svg>`;
+  }
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const point of bounds) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+  const span = Math.max(maxX - minX, maxY - minY, 1);
+  const pad = span * 0.08;
+  const viewBox = `${minX - pad} ${minY - pad} ${maxX - minX + pad * 2} ${maxY - minY + pad * 2}`;
+  const floors = rooms.map((room) => {
+    const points = room.outline.map((point) => `${point.x},${point.y}`).join(" ");
+    return `<polygon points="${points}" fill="${room.color}" stroke="${room.wall}" stroke-width="1.6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>`;
+  }).join("");
+  const furniture = items.map((item) => `
+    <rect x="${-item.w / 2}" y="${-item.d / 2}" width="${item.w}" height="${item.d}" fill="${svgColor(item.color, "#b7b1a4")}" stroke="rgba(0,0,0,0.4)" stroke-width="1" vector-effect="non-scaling-stroke" transform="translate(${item.x} ${item.y}) rotate(${item.rot})"/>
+  `).join("");
+  return `<svg class="plan-thumb-svg" viewBox="${viewBox}" aria-hidden="true">${floors}${furniture}</svg>`;
+}
+
+function itemCorners(item) {
+  const rad = (item.rot * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+  const halfW = item.w / 2;
+  const halfD = item.d / 2;
+  return [[-halfW, -halfD], [halfW, -halfD], [halfW, halfD], [-halfW, halfD]].map(([x, y]) => ({
+    x: item.x + x * cos - y * sin,
+    y: item.y + x * sin + y * cos,
+  }));
+}
+
+function svgColor(value, fallback) {
+  return /^#[0-9a-fA-F]{3,8}$/.test(String(value || "")) ? value : fallback;
 }
 
 function renderDetail() {

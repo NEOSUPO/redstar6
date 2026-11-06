@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>NEOSUPO★STAR β6</title>
-  <link rel="stylesheet" href="css/app.css?v=20261104n" />
+  <link rel="stylesheet" href="css/app.css?v=20261106b" />
   <script type="importmap">
   {
     "imports": {
@@ -99,9 +99,19 @@
   <dialog id="dialog-list">
     <form method="dialog">
       <h2>プラン一覧</h2>
-      <p id="plan-more" class="note" hidden>一覧は更新が新しい10件です。それより前のプランもブラウザに残しています。</p>
+      <div class="plan-list-bar">
+        <label>表示件数
+          <input id="plan-page-size" type="number" min="1" max="60" step="1" value="10" inputmode="numeric" />
+        </label>
+        <div class="plan-view-switch" role="group" aria-label="表示の切り替え">
+          <button type="button" id="plan-view-list" class="active" aria-pressed="true">一覧</button>
+          <button type="button" id="plan-view-thumb" aria-pressed="false">サムネイル</button>
+        </div>
+      </div>
+      <p class="note">1ページに出す件数です。サムネイルは部屋と器具の配置です。</p>
       <div id="plan-rows"></div>
-      <button value="close" type="submit">閉じる</button>
+      <nav id="plan-pager" class="plan-pager" aria-label="ページ"></nav>
+      <button id="plan-list-close" value="close" type="submit">閉じる</button>
     </form>
   </dialog>
 
@@ -145,6 +155,6 @@
   <div id="print-sheet"></div>
   <script src="vendor/jszip.min.js?v=20261022w"></script>
   <script src="vendor/exceljs.min.js?v=20261022w"></script>
-  <script type="module" src="main.js?v=20261106a"></script>
+  <script type="module" src="main.js?v=20261106b"></script>
 </body>
 </html>
