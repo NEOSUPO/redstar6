@@ -94,15 +94,17 @@ export function createView2d(canvas, store, ui) {
     drawUnderlay(plan.underlay);
     for (const room of plan.rooms) drawRoom(room, plan);
     drawOpeningMarks(plan);
-    const loose = [];
-    const atop = [];
-    for (const entry of plan.items) {
-      if (entry.openingId) drawLeaf(entry, plan);
-      else if (entry.hostId) atop.push(entry);
-      else loose.push(entry);
+    if (showPlacedItems()) {
+      const loose = [];
+      const atop = [];
+      for (const entry of plan.items) {
+        if (entry.openingId) drawLeaf(entry, plan);
+        else if (entry.hostId) atop.push(entry);
+        else loose.push(entry);
+      }
+      for (const entry of loose) drawItem(entry, plan);
+      for (const entry of atop) drawItem(entry, plan);
     }
-    for (const entry of loose) drawItem(entry, plan);
-    for (const entry of atop) drawItem(entry, plan);
     drawPower(ctx, plan, ui, screen, cam.scale);
     if (measure?.a && measure?.b) drawMeasure(measure.a, measure.b);
     if (drag?.kind === "new-room") drawDraft(drag.start, drag.current);
@@ -780,14 +782,14 @@ export function createView2d(canvas, store, ui) {
       placeItem(wpt);
       return;
     }
-    const opening = hitDoorLeaf(wpt.x, wpt.y) || hitOpening(store.get(), wpt.x, wpt.y);
+    const opening = (showPlacedItems() ? hitDoorLeaf(wpt.x, wpt.y) : null) || hitOpening(store.get(), wpt.x, wpt.y);
     if (opening) {
       ui.select({ kind: "opening", ids: [opening.id] });
       drag = { kind: "move-opening", id: opening.id, pending: true };
       draw();
       return;
     }
-    const item = hitItem(wpt.x, wpt.y);
+    const item = showPlacedItems() ? hitItem(wpt.x, wpt.y) : null;
     if (item) {
       const ids = event.shiftKey ? toggleIds("item", item.id, false) : memberIds(item);
       ui.select({ kind: "item", ids });
@@ -838,7 +840,7 @@ export function createView2d(canvas, store, ui) {
     pointer.sy = event.clientY - rect.top;
     const wpt = world(pointer.sx, pointer.sy);
     if (!pointer.down || !drag) {
-      const hit = hitItem(wpt.x, wpt.y);
+      const hit = showPlacedItems() ? hitItem(wpt.x, wpt.y) : null;
       const next = hit?.id || null;
       if (next !== hoverId) {
         hoverId = next;
@@ -1025,7 +1027,7 @@ export function createView2d(canvas, store, ui) {
     const y0 = Math.min(state.start.y, state.current.y);
     const x1 = Math.max(state.start.x, state.current.x);
     const y1 = Math.max(state.start.y, state.current.y);
-    const hits = store.get().items.filter((entry) => entry.x >= x0 && entry.x <= x1 && entry.y >= y0 && entry.y <= y1);
+    const hits = showPlacedItems() ? store.get().items.filter((entry) => entry.x >= x0 && entry.x <= x1 && entry.y >= y0 && entry.y <= y1) : [];
     const ids = [...new Set([...state.base, ...hits.flatMap((entry) => memberIds(entry))])];
     ui.select(ids.length ? { kind: "item", ids } : null);
     draw();
@@ -1243,6 +1245,10 @@ export function createView2d(canvas, store, ui) {
     const hit = nearestEdge(room, x, y);
     const reach = Math.max(Number(store.get().settings.wall) || 150, 180);
     return hit && hit.dist <= reach ? hit.edgeIndex : null;
+  }
+
+  function showPlacedItems() {
+    return ui.tab !== "layout" || ui.showPlaced !== false;
   }
 
   function showItem(entry) {

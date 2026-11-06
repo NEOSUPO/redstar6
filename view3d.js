@@ -342,11 +342,13 @@ export function createView3d(canvas, store, ui) {
       root.add(plane);
     }
     for (const room of plan.rooms) addRoom(room, plan, ceiling);
-    for (const entry of plan.items) addItem(entry, plan, ceiling, level);
-    const sole = selection?.kind === "item" && selection.ids.length === 1
-      ? plan.items.find((row) => row.id === selection.ids[0])
-      : null;
-    if (sole && !sole.locked && !sole.openingId && sole.place !== "wall") addSpin(sole, plan, ceiling);
+    if (ui.tab !== "layout" || ui.showPlaced !== false) {
+      for (const entry of plan.items) addItem(entry, plan, ceiling, level);
+      const sole = selection?.kind === "item" && selection.ids.length === 1
+        ? plan.items.find((row) => row.id === selection.ids[0])
+        : null;
+      if (sole && !sole.locked && !sole.openingId && sole.place !== "wall") addSpin(sole, plan, ceiling);
+    }
   }
 
   function addRoom(room, plan, ceiling) {
@@ -1005,7 +1007,8 @@ export function createView3d(canvas, store, ui) {
       mapCtx.strokeStyle = room.wallColor || "#8e98a3";
       mapCtx.stroke();
     }
-    for (const entry of plan.items || []) {
+    const showItems = ui.tab !== "layout" || ui.showPlaced !== false;
+    for (const entry of showItems ? plan.items || [] : []) {
       const itemW = Number(entry.w) || 0;
       const itemD = Number(entry.d) || 0;
       if (itemW < 40 || itemD < 40) continue;
@@ -1197,8 +1200,11 @@ export function createView3d(canvas, store, ui) {
   });
   window.addEventListener("resize", resize);
   store.subscribe(rebuild);
+  let hidePlaced = ui.tab === "layout" && ui.showPlaced === false;
   ui.subscribe(() => {
-    if ((ui.tab === "present") === hq) return;
+    const nextHide = ui.tab === "layout" && ui.showPlaced === false;
+    if ((ui.tab === "present") === hq && nextHide === hidePlaced) return;
+    hidePlaced = nextHide;
     rebuild();
   });
   resize();

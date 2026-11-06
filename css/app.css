@@ -345,6 +345,8 @@ h2 { margin: 0; font-size: 11px; letter-spacing: 0.12em; color: var(--teal); }
 .side-block > .tool-row {
   flex: 1 0 100%;
   display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   padding-bottom: 8px;
   margin-bottom: 2px;
   border-bottom: 1px solid var(--line);

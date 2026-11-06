@@ -7,7 +7,7 @@ import { bindPower, powerPanel } from "./power.js?v=20261028d";
 import { createStore, uid } from "./store.js?v=20261106b";
 import { seatItems } from "./surface.js?v=20261028d";
 import { mountSpecs } from "./specs.js?v=20261104m";
-import { createView2d } from "./view2d.js?v=20261104o";
+import { createView2d } from "./view2d.js?v=20261106c";
 
 const store = createStore();
 const ui = createController();
@@ -257,7 +257,7 @@ async function setMode(next) {
   document.querySelector("#mode-3d").classList.toggle("active", next === "3d");
   document.querySelector("#view-toggle").hidden = next !== "3d";
   if (next === "3d" && !view3d) {
-    const mod = await import("./view3d.js?v=20261104n");
+    const mod = await import("./view3d.js?v=20261106c");
     view3d = mod.createView3d(document.querySelector("#view3d"), store, ui);
     view3d.setSelection(ui.selection);
   }
@@ -317,6 +317,7 @@ function bindSidebar() {
   });
   sidebar.querySelector("#measure")?.addEventListener("click", () => ui.setTool("measure"));
   sidebar.querySelector("#select-tool")?.addEventListener("click", () => ui.setTool("select"));
+  sidebar.querySelector("#placed-visible")?.addEventListener("click", () => ui.setShowPlaced(!ui.showPlaced));
   sidebar.querySelector("#underlay-file")?.addEventListener("change", async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -404,6 +405,7 @@ function layoutPanel() {
     <div class="side-block">
       <div class="tool-row">
         <button type="button" id="select-tool" class="${ui.tool === "select" ? "active" : ""}">選択 / 移動</button>
+        <button type="button" id="placed-visible" class="${ui.showPlaced ? "active" : ""}" aria-pressed="${ui.showPlaced}">${ui.showPlaced ? "配置を隠す" : "配置を表示"}</button>
       </div>
       <h2>部屋</h2>
       ${rooms}
@@ -1391,12 +1393,13 @@ function clamp(value, min, max) {
 
 function createController() {
   const listeners = new Set();
-  const state = { tab: "layout", tool: "select", catalogId: null, roomType: "実験室", roomColor: "#d5e4f2", selection: null, wallPick: null, powerSymbol: null, powerPrompt: null };
+  const state = { tab: "layout", tool: "select", showPlaced: localStorage.getItem("neosupo-star-beta6-layout-items") !== "0", catalogId: null, roomType: "実験室", roomColor: "#d5e4f2", selection: null, wallPick: null, powerSymbol: null, powerPrompt: null };
   function emit() {
     listeners.forEach((fn) => fn());
   }
   return {
     get tool() { return state.tool; },
+    get showPlaced() { return state.showPlaced; },
     get tab() { return state.tab; },
     get powerSymbol() { return state.powerSymbol; },
     get powerPrompt() { return state.powerPrompt; },
@@ -1422,6 +1425,12 @@ function createController() {
     },
     setPowerPrompt(id) {
       state.powerPrompt = id;
+      emit();
+    },
+    setShowPlaced(shown) {
+      state.showPlaced = !!shown;
+      localStorage.setItem("neosupo-star-beta6-layout-items", state.showPlaced ? "1" : "0");
+      if (!state.showPlaced && state.tab === "layout" && state.selection?.kind === "item") state.selection = null;
       emit();
     },
     setTool(tool) {
