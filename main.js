@@ -30,10 +30,7 @@ function resizeViews() {
   });
 }
 
-function setFold(kind, folded) {
-  const saved = readFolds();
-  saved[kind] = folded;
-  localStorage.setItem(FOLD_KEY, JSON.stringify(saved));
+function paintFold(kind, folded) {
   if (kind === "menu") {
     document.querySelector(".workspace").classList.toggle("menu-folded", folded);
     const button = document.querySelector("#fold-menu");
@@ -53,10 +50,31 @@ function setFold(kind, folded) {
   resizeViews();
 }
 
+function setFold(kind, folded) {
+  const saved = readFolds();
+  saved[kind] = folded;
+  localStorage.setItem(FOLD_KEY, JSON.stringify(saved));
+  paintFold(kind, folded);
+}
+
+function specsStartsFolded(saved) {
+  return !Object.prototype.hasOwnProperty.call(saved, "specs") || !!saved.specs;
+}
+
+function applyTabFolds(nextTab) {
+  const saved = readFolds();
+  if (nextTab === "power" || nextTab === "present") {
+    paintFold("menu", true);
+    paintFold("specs", true);
+    return;
+  }
+  paintFold("menu", !!saved.menu);
+  paintFold("specs", specsStartsFolded(saved));
+}
+
 const storedFolds = readFolds();
-if (storedFolds.menu) setFold("menu", true);
-if (storedFolds.tools) setFold("tools", true);
-if (storedFolds.specs) setFold("specs", true);
+if (storedFolds.tools) paintFold("tools", true);
+applyTabFolds("layout");
 document.querySelector("#fold-menu").addEventListener("click", () => {
   setFold("menu", !document.querySelector(".workspace").classList.contains("menu-folded"));
 });
@@ -85,6 +103,7 @@ document.querySelectorAll(".tabs button").forEach((button) => {
     if (tab === "items" || tab === "layout" || tab === "power") ui.setTool("select");
     document.querySelector("#mode-3d").hidden = tab === "power";
     if (tab === "power" && mode === "3d") setMode("2d");
+    applyTabFolds(tab);
     renderSidebar();
   });
 });

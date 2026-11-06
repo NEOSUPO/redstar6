@@ -39,7 +39,7 @@
     <button id="new-plan" type="button">＋ 新しいプラン</button>
     <input id="excel-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden />
   </header>
-  <div class="workspace">
+  <div class="workspace specs-folded">
     <div id="menu-panel">
       <button type="button" id="fold-menu" class="fold" aria-expanded="true" aria-controls="sidebar">パネルを閉じる</button>
       <aside id="sidebar"></aside>
@@ -77,7 +77,7 @@
       </div>
     </main>
     <aside id="specs-panel">
-      <button type="button" id="fold-specs" class="fold" aria-expanded="true" aria-controls="specs-body">諸元一覧を閉じる</button>
+      <button type="button" id="fold-specs" class="fold" aria-expanded="false" aria-controls="specs-body">諸元一覧</button>
       <div id="specs-body"></div>
     </aside>
   </div>
@@ -128,7 +128,7 @@
         <li>DRAW と 3D を切り替えます。3D の Sky はドラッグで見下ろし、右ドラッグで移動、ホイールと拡大・縮小で寄り引きします。Walk は目の高さで、ドラッグで見回します。Q で左、E で右を向きます。Ctrl を押しながらテンキーの 4・6（または左右の矢印）でも向きが変わり、Ctrl を離すと左右に歩きます。矢印キー、テンキーの 8 2 4 6、または W A S D で歩き、Shift で速く歩きます。ホイールと拡大・縮小でも寄り引きします。器具をクリックすると選べます。何もないところをクリックすると選択が外れます。選んだ器具をドラッグすると図面の横方向に動き、足元の円をドラッグすると床に垂直な軸で15度ずつ回ります。幅・奥行・高さは左の欄です。</li>
         <li>ロックすると、その器具の移動、回転、削除、寸法の変更が止まります。選択と解除はできます。</li>
         <li>空いた場所をドラッグすると図面全体が動きます。右ドラッグでも移動できます。Shift を押しながら空いた場所をドラッグすると複数選択です。</li>
-        <li>左の部屋パネルは「パネルを閉じる」で隠せます。図面下の操作は「閉じる」で隠せます。右の諸元一覧は「諸元一覧を閉じる」で隠せます。戻すときは「パネル」「操作」「諸元一覧」です。諸元一覧の行と図面の物品は同じ選択です。</li>
+        <li>左の部屋パネルは「パネルを閉じる」で隠せます。図面下の操作は「閉じる」で隠せます。右の諸元一覧は「諸元一覧を閉じる」で隠せます。戻すときは「パネル」「操作」「諸元一覧」です。初めて開いたときはパネルが開き、諸元一覧は閉じています。配電と報告では、その画面に入ったときパネルと諸元一覧を閉じます。間取と配置に戻ると、閉じる前の開き方に戻ります。諸元一覧の行と図面の物品は同じ選択です。</li>
         <li>Delete で削除、Ctrl+Z / Ctrl+Y で元に戻す・やり直す、Ctrl+C または Ctrl+D で複製、Ctrl+G でグループです。</li>
         <li>アイテム配置の左開き・右開き・両開き・押し戸・引き戸は、壁をクリックすると床までのドアになります。左開きと右開きは部屋の内側から見た吊元です。押し戸は外側へ開きます。置いたあとは選択・移動になり、続けて置くときはもう一度部品を選びます。</li>
         <li>間取設定の壁抜き・開口部・腰壁でも壁に穴を開けられます。開口を選んで建具を付けると、ドアは床まで開きます。</li>
@@ -145,6 +145,6 @@
   <div id="print-sheet"></div>
   <script src="vendor/jszip.min.js?v=20261022w"></script>
   <script src="vendor/exceljs.min.js?v=20261022w"></script>
-  <script type="module" src="main.js?v=20261104o"></script>
+  <script type="module" src="main.js?v=20261106a"></script>
 </body>
 </html>
