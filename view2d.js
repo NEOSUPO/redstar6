@@ -104,6 +104,8 @@ export function createView2d(canvas, store, ui) {
       }
       for (const entry of loose) drawItem(entry, plan);
       for (const entry of atop) drawItem(entry, plan);
+      const spinning = spinTarget();
+      if (spinning) drawSpin(spinning);
     }
     drawPower(ctx, plan, ui, screen, cam.scale);
     if (measure?.a && measure?.b) drawMeasure(measure.a, measure.b);
@@ -527,6 +529,52 @@ export function createView2d(canvas, store, ui) {
     ctx.restore();
   }
 
+  function spinTarget() {
+    if (!showPlacedItems()) return null;
+    if (ui.selection?.kind !== "item" || ui.selection.ids.length !== 1) return null;
+    const entry = store.get().items.find((row) => row.id === ui.selection.ids[0]);
+    if (!entry || entry.locked || entry.openingId || entry.place === "wall") return null;
+    return entry;
+  }
+
+  function spinGeom(entry) {
+    const radius = Math.max(entry.w, entry.d) * 0.5 + 220;
+    const ang = ((Number(entry.rot) || 0) * Math.PI) / 180;
+    return {
+      radius,
+      nubX: entry.x + Math.cos(ang) * radius,
+      nubY: entry.y + Math.sin(ang) * radius,
+    };
+  }
+
+  function drawSpin(entry) {
+    const spin = spinGeom(entry);
+    const center = screen(entry.x, entry.y);
+    const nub = screen(spin.nubX, spin.nubY);
+    ctx.save();
+    ctx.strokeStyle = "#1d6fd4";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(center.x, center.y, spin.radius * cam.scale, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "#1d6fd4";
+    ctx.beginPath();
+    ctx.arc(nub.x, nub.y, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function hitSpin(wx, wy) {
+    const entry = spinTarget();
+    if (!entry || pointInRotatedRect(wx, wy, entry)) return null;
+    const spin = spinGeom(entry);
+    const slop = 16 / cam.scale + 50;
+    if (Math.hypot(wx - spin.nubX, wy - spin.nubY) <= slop) return entry;
+    const dist = Math.abs(Math.hypot(wx - entry.x, wy - entry.y) - spin.radius);
+    if (dist <= slop) return entry;
+    return null;
+  }
+
   function strokeRect(x, y, w, h) {
     ctx.strokeStyle = "#0060b0";
     ctx.lineWidth = 2;
@@ -789,6 +837,20 @@ export function createView2d(canvas, store, ui) {
       draw();
       return;
     }
+    const spinItem = showPlacedItems() ? hitSpin(wpt.x, wpt.y) : null;
+    if (spinItem) {
+      ui.select({ kind: "item", ids: [spinItem.id] });
+      drag = {
+        kind: "spin-item",
+        id: spinItem.id,
+        startRot: Number(spinItem.rot) || 0,
+        startAngle: Math.atan2(wpt.y - spinItem.y, wpt.x - spinItem.x),
+        pending: true,
+      };
+      canvas.style.cursor = "grabbing";
+      draw();
+      return;
+    }
     const item = showPlacedItems() ? hitItem(wpt.x, wpt.y) : null;
     if (item) {
       const ids = event.shiftKey ? toggleIds("item", item.id, false) : memberIds(item);
@@ -840,7 +902,9 @@ export function createView2d(canvas, store, ui) {
     pointer.sy = event.clientY - rect.top;
     const wpt = world(pointer.sx, pointer.sy);
     if (!pointer.down || !drag) {
-      const hit = showPlacedItems() ? hitItem(wpt.x, wpt.y) : null;
+      const spinHit = showPlacedItems() ? hitSpin(wpt.x, wpt.y) : null;
+      canvas.style.cursor = spinHit ? "grab" : "";
+      const hit = spinHit ? null : (showPlacedItems() ? hitItem(wpt.x, wpt.y) : null);
       const next = hit?.id || null;
       if (next !== hoverId) {
         hoverId = next;
@@ -861,6 +925,14 @@ export function createView2d(canvas, store, ui) {
     if (drag.kind === "new-room" || drag.kind === "marquee") {
       drag.current = drag.kind === "new-room" ? snapPoint(wpt) : wpt;
       draw();
+      return;
+    }
+    if (drag.kind === "spin-item") {
+      if (drag.pending) {
+        store.checkpoint();
+        drag.pending = false;
+      }
+      spinSelection(drag, wpt);
       return;
     }
     if (drag.kind === "move-items" || drag.kind === "move-rooms" || drag.kind === "move-opening" || drag.kind === "move-vertex" || drag.kind === "move-underlay" || drag.kind === "resize-underlay" || drag.kind === "move-power") {
@@ -891,6 +963,14 @@ export function createView2d(canvas, store, ui) {
     if (drag?.kind === "move-underlay" || drag?.kind === "resize-underlay") ui.select({ kind: "underlay", ids: ["underlay"] });
     if (drag?.kind === "new-room") finishRoom(drag.start, drag.current);
     if (drag?.kind === "marquee") finishMarquee(drag);
+    if (drag?.kind === "spin-item" && !drag.pending) {
+      const id = drag.id;
+      store.mutate((plan) => {
+        const guests = plan.items.filter((entry) => entry.hostId === id).map((entry) => entry.id);
+        seatItems(plan, [id, ...guests]);
+      });
+    }
+    canvas.style.cursor = "";
     if (drag?.kind === "move-items" && !drag.pending) {
       const ids = drag.ids;
       store.mutate((plan) => {
@@ -908,6 +988,24 @@ export function createView2d(canvas, store, ui) {
     cam.scale = Math.min(0.4, Math.max(0.01, cam.scale * factor));
     draw();
   }, { passive: false });
+
+  function spinSelection(state, wpt) {
+    const entry = store.get().items.find((row) => row.id === state.id);
+    if (!entry) return;
+    let delta = Math.atan2(wpt.y - entry.y, wpt.x - entry.x) - state.startAngle;
+    while (delta > Math.PI) delta -= Math.PI * 2;
+    while (delta < -Math.PI) delta += Math.PI * 2;
+    let rot = state.startRot + (delta * 180) / Math.PI;
+    rot = Math.round(rot);
+    rot = ((rot % 360) + 360) % 360;
+    if (Math.abs((Number(entry.rot) || 0) - rot) < 0.5) return;
+    store.mutate((plan) => {
+      const row = plan.items.find((item) => item.id === state.id);
+      if (row) row.rot = rot;
+    });
+    const angle = document.querySelector('#sidebar [data-field="rot"]');
+    if (angle) angle.value = String(rot);
+  }
 
   function moveSelection(state, wpt, enabled) {
     store.mutate((plan) => {

@@ -7,7 +7,7 @@ import { bindPower, powerPanel } from "./power.js?v=20261028d";
 import { createStore, uid } from "./store.js?v=20261106b";
 import { seatItems } from "./surface.js?v=20261028d";
 import { mountSpecs } from "./specs.js?v=20261104m";
-import { createView2d } from "./view2d.js?v=20261106c";
+import { createView2d } from "./view2d.js?v=20261109e";
 
 const store = createStore();
 const ui = createController();
@@ -705,7 +705,7 @@ function itemProps(entry) {
   return `<div class="props">
     <h2>${escapeHtml(entry.name)}</h2>
     <label class="check"><input id="item-lock" type="checkbox" ${locked ? "checked" : ""} /> ロック</label>
-    <p class="note">${locked ? "ロック中です。解除すると移動、回転、削除、寸法の変更ができます。" : "幅・奥行・高さはここで変えます。3Dで選んだ器具をドラッグすると図面の横方向に動き、足元の円で1度ずつ回ります。回転ボタンは15度です。"}</p>
+    <p class="note">${locked ? "ロック中です。解除すると移動、回転、削除、寸法の変更ができます。" : "幅・奥行・高さはここで変えます。平面図と3Dでは、周りの円をドラッグすると1度ずつ回ります。回転ボタンは15度です。"}</p>
     <label>幅 mm<input data-field="w" type="number" min="50" value="${Math.round(entry.w)}" ${read} /></label>
     <label>奥行 mm<input data-field="d" type="number" min="50" value="${Math.round(entry.d)}" ${read} /></label>
     <label>高さ mm<input data-field="h" type="number" min="50" value="${Math.round(entry.h)}" ${read} /></label>
