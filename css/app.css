@@ -454,7 +454,10 @@ dialog::backdrop { background: rgba(6, 32, 36, 0.46); }
 table { width: 100%; border-collapse: collapse; font-size: 12px; }
 td, th { border-bottom: 1px solid var(--line); padding: 6px 4px; text-align: left; }
 input[type="color"] { height: 36px; padding: 2px; }
-#dialog-detail { width: min(760px, 96vw); }
+#dialog-detail { width: min(920px, 96vw); }
+#dialog-detail-columns { width: min(440px, 96vw); }
+.detail-columns { display: grid; gap: 8px; margin: 8px 0 14px; }
+.detail-columns .check { border-radius: 12px; }
 #detail-body { max-height: 60vh; overflow: auto; }
 #print-sheet { display: none; }
 .stage, .float-tools { user-select: none; }

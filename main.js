@@ -1,4 +1,4 @@
-import { bookToPlan, planToBook } from "./book.js?v=20261104h";
+import { bookToPlan, planToBook } from "./book.js?v=20261109b";
 import { insertPoint, outlinePoints, removePoint, roomArea, scaleRoom, setEdgeArc } from "./geometry.js?v=20261022d";
 import { ROOM_TYPES, catalogTemplateCsv, categoryTree, importUserCatalog, loadSharedCatalog, lookupItem } from "./catalog.js?v=20261028d";
 import { readTables, writeWorkbook } from "./excelio.js?v=20261028d";
@@ -194,6 +194,16 @@ document.querySelector("#detail").addEventListener("click", () => {
   renderDetail();
   document.querySelector("#dialog-detail").showModal();
 });
+document.querySelector("#detail-columns").addEventListener("click", () => {
+  renderDetailColumns();
+  document.querySelector("#dialog-detail-columns").showModal();
+});
+document.querySelector("#detail-column-list").addEventListener("change", (event) => {
+  if (!event.target.closest("[data-detail-column]")) return;
+  const ids = [...document.querySelectorAll("[data-detail-column]:checked")].map((input) => input.dataset.detailColumn);
+  saveDetailColumns(ids);
+  renderDetail();
+});
 document.querySelector("#help").addEventListener("click", () => document.querySelector("#dialog-help").showModal());
 document.querySelector("#print").addEventListener("click", () => {
   renderDetail();
@@ -257,7 +267,7 @@ async function setMode(next) {
   document.querySelector("#mode-3d").classList.toggle("active", next === "3d");
   document.querySelector("#view-toggle").hidden = next !== "3d";
   if (next === "3d" && !view3d) {
-    const mod = await import("./view3d.js?v=20261106c");
+    const mod = await import("./view3d.js?v=20261109d");
     view3d = mod.createView3d(document.querySelector("#view3d"), store, ui);
     view3d.setSelection(ui.selection);
   }
@@ -695,11 +705,11 @@ function itemProps(entry) {
   return `<div class="props">
     <h2>${escapeHtml(entry.name)}</h2>
     <label class="check"><input id="item-lock" type="checkbox" ${locked ? "checked" : ""} /> ロック</label>
-    <p class="note">${locked ? "ロック中です。解除すると移動、回転、削除、寸法の変更ができます。" : "幅・奥行・高さはここで変えます。3Dで選んだ器具をドラッグすると図面の横方向に動き、足元の円で回ります。"}</p>
+    <p class="note">${locked ? "ロック中です。解除すると移動、回転、削除、寸法の変更ができます。" : "幅・奥行・高さはここで変えます。3Dで選んだ器具をドラッグすると図面の横方向に動き、足元の円で1度ずつ回ります。回転ボタンは15度です。"}</p>
     <label>幅 mm<input data-field="w" type="number" min="50" value="${Math.round(entry.w)}" ${read} /></label>
     <label>奥行 mm<input data-field="d" type="number" min="50" value="${Math.round(entry.d)}" ${read} /></label>
     <label>高さ mm<input data-field="h" type="number" min="50" value="${Math.round(entry.h)}" ${read} /></label>
-    ${wall ? `<label>取付高さ mm<input data-field="z" type="number" value="${Math.round(entry.z || 0)}" ${read} /></label>` : `<label>角度<input data-field="rot" type="number" step="${store.get().settings.rotationStep}" value="${entry.rot}" ${read} /></label>`}
+    ${wall ? `<label>取付高さ mm<input data-field="z" type="number" value="${Math.round(entry.z || 0)}" ${read} /></label>` : `<label>角度<input data-field="rot" type="number" step="1" value="${entry.rot}" ${read} /></label>`}
     ${hostLine(entry)}
     <label>色<input data-field="color" data-kind="color" type="color" value="${entry.color || "#cccccc"}" /></label>
     <label>単価<input data-field="price" data-kind="price" type="number" min="0" placeholder="未設定" value="${entry.price ?? ""}" /></label>
@@ -708,6 +718,7 @@ function itemProps(entry) {
       <label>メーカー<input data-field="maker" data-kind="text" type="text" value="${escapeHtml(entry.maker || "")}" /></label>
       <label>型式<input data-field="model" data-kind="text" type="text" value="${escapeHtml(entry.model || "")}" /></label>
       <label>重量 kg<input data-field="weightKg" type="number" min="0" value="${entry.weightKg ?? ""}" /></label>
+      <label>CO2排出量 kt<input data-field="co2Kt" type="number" min="0" step="any" value="${entry.co2Kt ?? ""}" /></label>
       <label>電気<input data-field="power" data-kind="text" type="text" value="${escapeHtml(entry.power || "")}" /></label>
       <label>給水<input data-field="water" data-kind="text" type="text" value="${escapeHtml(entry.water || "")}" /></label>
       <label>排水<input data-field="drain" data-kind="text" type="text" value="${escapeHtml(entry.drain || "")}" /></label>
@@ -1036,9 +1047,9 @@ function loadPlanListPref() {
   try {
     const saved = JSON.parse(localStorage.getItem(PLAN_LIST_KEY)) || {};
     const pageSize = Math.min(60, Math.max(1, Math.round(Number(saved.pageSize)) || 10));
-    return { page: 0, pageSize, view: saved.view === "thumb" ? "thumb" : "list" };
+    return { page: 0, pageSize, view: saved.view === "list" ? "list" : "thumb" };
   } catch {
-    return { page: 0, pageSize: 10, view: "list" };
+    return { page: 0, pageSize: 10, view: "thumb" };
   }
 }
 
@@ -1219,6 +1230,40 @@ function svgColor(value, fallback) {
   return /^#[0-9a-fA-F]{3,8}$/.test(String(value || "")) ? value : fallback;
 }
 
+const DETAIL_COLUMNS = [
+  ["name", "名称"],
+  ["count", "数量"],
+  ["size", "幅×奥行×高さ mm"],
+  ["weight", "重量 kg"],
+  ["co2", "CO2排出量 kt"],
+  ["price", "単価"],
+  ["amount", "金額"],
+];
+const DETAIL_DEFAULT = ["name", "count", "size"];
+const DETAIL_KEY = "neosupo-star-beta6-detail-columns";
+
+function loadDetailColumns() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(DETAIL_KEY));
+    if (!Array.isArray(saved)) return DETAIL_DEFAULT.slice();
+    const known = new Set(DETAIL_COLUMNS.map(([id]) => id));
+    return saved.filter((id) => known.has(id));
+  } catch {
+    return DETAIL_DEFAULT.slice();
+  }
+}
+
+function saveDetailColumns(ids) {
+  localStorage.setItem(DETAIL_KEY, JSON.stringify(ids));
+}
+
+function renderDetailColumns() {
+  const on = new Set(loadDetailColumns());
+  document.querySelector("#detail-column-list").innerHTML = DETAIL_COLUMNS.map(([id, label]) => `
+    <label class="check"><input type="checkbox" data-detail-column="${id}" ${on.has(id) ? "checked" : ""} /> ${escapeHtml(label)}</label>
+  `).join("");
+}
+
 function renderDetail() {
   const html = detailHtml(store.get());
   document.querySelector("#detail-body").innerHTML = html;
@@ -1226,21 +1271,37 @@ function renderDetail() {
 }
 
 function detailHtml(plan) {
+  const columns = loadDetailColumns();
   const lines = quoteLines(plan);
-  const rows = lines.map((line) => {
-    const amount = line.price == null ? "未設定" : `¥${(line.price * line.count).toLocaleString()}`;
-    const unit = line.price == null ? "未設定" : `¥${line.price.toLocaleString()}`;
-    const weight = line.weight == null ? "未設定" : formatKg(line.weight);
-    return `<tr><td>${escapeHtml(line.name)}</td><td>${line.count}</td><td>${line.w}×${line.d}×${line.h}</td><td>${weight}</td><td>${unit}</td><td>${amount}</td></tr>`;
-  }).join("");
+  const head = columns.map((id) => `<th>${escapeHtml(DETAIL_COLUMNS.find(([key]) => key === id)[1])}</th>`).join("");
+  const rows = lines.map((line) => `<tr>${detailCells(line, columns).map((cell) => `<td>${cell}</td>`).join("")}</tr>`).join("");
+  const summary = detailSummary(plan, columns);
+  const empty = columns.length ? `<tr><td colspan="${columns.length}">器具はまだありません。</td></tr>` : "";
   return `
     <p>${escapeHtml(plan.name)} / 天井高 ${plan.settings.ceiling}mm / 壁厚 ${plan.settings.wall}mm</p>
-    <p>${totalLabel(plan)} / ${weightLabel(plan)}</p>
-    <table>
-      <thead><tr><th>名称</th><th>数量</th><th>幅×奥行×高さ mm</th><th>重量 kg</th><th>単価</th><th>金額</th></tr></thead>
-      <tbody>${rows || `<tr><td colspan="6">器具はまだありません。</td></tr>`}</tbody>
-    </table>
+    ${summary ? `<p>${summary}</p>` : ""}
+    ${columns.length ? `<table><thead><tr>${head}</tr></thead><tbody>${rows || empty}</tbody></table>` : `<p class="note">表示する項目がありません。表示設定から選んでください。</p>`}
   `;
+}
+
+function detailCells(line, columns) {
+  return columns.map((id) => {
+    if (id === "name") return escapeHtml(line.name);
+    if (id === "count") return String(line.count);
+    if (id === "size") return `${line.w}×${line.d}×${line.h}`;
+    if (id === "weight") return line.weight == null ? "未設定" : formatKg(line.weight);
+    if (id === "co2") return line.co2 == null ? "未設定" : formatKg(line.co2);
+    if (id === "price") return line.price == null ? "未設定" : `¥${line.price.toLocaleString()}`;
+    return line.price == null ? "未設定" : `¥${(line.price * line.count).toLocaleString()}`;
+  });
+}
+
+function detailSummary(plan, columns) {
+  const parts = [];
+  if (columns.includes("price") || columns.includes("amount")) parts.push(totalLabel(plan));
+  if (columns.includes("weight")) parts.push(weightLabel(plan));
+  if (columns.includes("co2")) parts.push(co2Label(plan));
+  return parts.join(" / ");
 }
 
 function quoteLines(plan) {
@@ -1248,9 +1309,10 @@ function quoteLines(plan) {
   for (const entry of plan.items) {
     const price = priceOf(entry);
     const weight = weightOf(entry);
+    const co2 = co2Of(entry);
     const name = entry.design ? `${entry.name}（${entry.design}）` : entry.name;
-    const key = [name, entry.w, entry.d, entry.h, price, weight].join("|");
-    const found = groups.get(key) || { name, count: 0, w: entry.w, d: entry.d, h: entry.h, price, weight };
+    const key = [name, entry.w, entry.d, entry.h, price, weight, co2].join("|");
+    const found = groups.get(key) || { name, count: 0, w: entry.w, d: entry.d, h: entry.h, price, weight, co2 };
     found.count += 1;
     groups.set(key, found);
   }
@@ -1265,6 +1327,11 @@ function priceOf(entry) {
 function weightOf(entry) {
   if (entry.weightKg == null || entry.weightKg === "" || Number.isNaN(Number(entry.weightKg))) return null;
   return Number(entry.weightKg);
+}
+
+function co2Of(entry) {
+  if (entry.co2Kt == null || entry.co2Kt === "" || Number.isNaN(Number(entry.co2Kt))) return null;
+  return Number(entry.co2Kt);
 }
 
 function formatKg(value) {
@@ -1288,6 +1355,15 @@ function weightLabel(plan) {
   const sum = weighed.reduce((acc, line) => acc + line.weight * line.count, 0);
   const missing = weighed.length !== lines.length;
   return `重量合計 ${formatKg(sum)} kg${missing ? "（未設定あり）" : ""}`;
+}
+
+function co2Label(plan) {
+  const lines = quoteLines(plan);
+  const known = lines.filter((line) => line.co2 != null);
+  if (!known.length) return "CO2合計 未設定";
+  const sum = known.reduce((acc, line) => acc + line.co2 * line.count, 0);
+  const missing = known.length !== lines.length;
+  return `CO2合計 ${formatKg(sum)} kt${missing ? "（未設定あり）" : ""}`;
 }
 
 async function saveView() {

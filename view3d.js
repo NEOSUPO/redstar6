@@ -259,8 +259,10 @@ export function createView3d(canvas, store, ui) {
     hq = ui.tab === "present";
     const step = [0, 1, 2].includes(Number(plan.settings?.brightness)) ? Number(plan.settings.brightness) : 1;
     const level = BRIGHTNESS[step];
-    renderer.toneMapping = hq ? THREE.ACESFilmicToneMapping : THREE.NoToneMapping;
-    renderer.toneMappingExposure = hq ? EXPOSURE[step] : 1;
+    // The composer draws into a render target, so material tone mapping never runs.
+    // OutputPass applies this exposure. The middle step stays at 1, so 標準 keeps the current picture.
+    renderer.toneMapping = hq ? THREE.LinearToneMapping : THREE.NoToneMapping;
+    renderer.toneMappingExposure = hq ? EXPOSURE[step] / EXPOSURE[1] : 1;
     renderer.shadowMap.enabled = hq;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setClearColor(hq ? 0xd4e3ee : 0xe4eeea);
@@ -295,12 +297,7 @@ export function createView3d(canvas, store, ui) {
     pass.minDistance = 0.00035;
     pass.maxDistance = 0.004;
     composer.addPass(pass);
-    const output = new OutputPass();
-    composer.addPass(output);
-    output._toneMapping = THREE.ACESFilmicToneMapping;
-    output._outputColorSpace = renderer.outputColorSpace;
-    output.material.defines = { SRGB_TRANSFER: "" };
-    output.material.needsUpdate = true;
+    composer.addPass(new OutputPass());
   }
 
   let composerSize = "";
@@ -1351,11 +1348,10 @@ export function createView3d(canvas, store, ui) {
     let delta = Math.atan2(point.z - entry.y, point.x - entry.x) - spin.startAngle;
     while (delta > Math.PI) delta -= Math.PI * 2;
     while (delta < -Math.PI) delta += Math.PI * 2;
-    const step = Number(plan.settings.rotationStep) || 15;
     let rot = spin.startRot + (delta * 180) / Math.PI;
-    rot = Math.round(rot / step) * step;
+    rot = Math.round(rot);
     rot = ((rot % 360) + 360) % 360;
-    if (Math.round(Number(entry.rot) || 0) === rot) return;
+    if (Math.abs((Number(entry.rot) || 0) - rot) < 0.5) return;
     if (spin.pending) {
       store.checkpoint();
       spin.pending = false;
